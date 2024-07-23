@@ -30,9 +30,18 @@ dp = Dispatcher()
 # Хэндлер на команду /start
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
-    await message.answer("Привет! Я бот, распознающий сгенерировано ли изображение нейросетью или сделано человеком.")
-@dp.message(Command("help"))
-async def cmd_start(message: types.Message):
+    button_help = [
+        [
+            types.KeyboardButton(text = "Помощь")
+        ],
+    ]
+    keyboard = types.ReplyKeyboardMarkup(keyboard=button_help,
+        resize_keyboard=True)
+    await message.reply("Привет! Я бот, распознающий сгенерировано ли изображение нейросетью или сделано человеком.",
+                          reply_markup=keyboard)
+
+@dp.message(F.text == "Помощь")
+async def help(message: types.Message):
     await message.answer("Просто отправьте мне изображение в формате jpg, jpeg или png.")
 
 @dp.message(F.photo)
@@ -42,7 +51,6 @@ async def download_photo(message: types.Message, bot: Bot):
    await message.bot.download(file=message.photo[-1],
         destination=file_in_io)
    img_path = file_in_io
-  #  img_path = f"C://Users//Lilya//Downloads//generated-or-not//my_images//{message.photo[-1].file_id}.jpg"
 # получаем предсказание
    pred = predictions(img_path)
 # Отправляем ответ пользователю
