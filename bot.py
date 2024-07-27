@@ -8,95 +8,80 @@ Original file is located at
 """
 
 import asyncio
-import logging
-from aiogram import Bot, Dispatcher, types
-from aiogram.filters.command import Command
-from aiogram import F
-import numpy as np
-import tensorflow as tf
-from tensorflow import keras
-from keras.models import load_model
-from tensorflow.keras.preprocessing.image import load_img, img_to_array
+from aiogram import Bot, Dispatcher
 from config_reader import config
-import io
+import logging
+from handlers import start_help, different_types, photo
 
-#включаем логирование
-logging.basicConfig(level=logging.INFO)
-#объект бота
-bot = Bot(token=config.bot_token.get_secret_value())
-# bot = Bot(token=config.bot_token.get_secret_value())
-# Диспетчер
-dp = Dispatcher()
-# Хэндлер на команду /start
-@dp.message(Command("start"))
-async def cmd_start(message: types.Message):
-    button_help = [
-        [
-            types.KeyboardButton(text = "Помощь")
-        ],
-    ]
-    keyboard = types.ReplyKeyboardMarkup(keyboard=button_help,
-        resize_keyboard=True)
-    await message.reply("Привет! Я бот, распознающий сгенерировано ли изображение нейросетью или сделано человеком.",
-                          reply_markup=keyboard)
-
-@dp.message(F.text == "Помощь")
-async def help(message: types.Message):
-    await message.answer("Просто отправьте мне изображение в формате jpg, jpeg или png.")
-
-@dp.message(F.photo)
-async def download_photo(message: types.Message, bot: Bot):
-   file_in_io = io.BytesIO()
-# загружаем фото в папку по умолчанию
-   await message.bot.download(file=message.photo[-1],
-        destination=file_in_io)
-   img_path = file_in_io
-# получаем предсказание
-   pred = predictions(img_path)
-# Отправляем ответ пользователю
-   await message.answer(f"Я думаю, что это {pred}")
-
-@dp.message(F.text)
-async def echo_text(message: types.Message):
-    await message.answer("Я не умею работать с текстом, мне нужно изображение")
-
-@dp.message(F.animation)
-async def echo_gif(message: types.Message):
-    await message.answer("Я не умею работать с гифками, мне нужно изображение")
-
-@dp.message(F.video)
-async def echo_video(message: types.Message):
-    await message.answer("Я не умею работать с видео, мне нужно изображение")
-
-@dp.message(F.sticker)
-async def echo_stick(message: types.Message):
-    await message.answer("Я не умею работать со стикерами, мне нужно изображение")
-
-@dp.message(F.document)
-async def echo_doc(message: types.Message):
-    await message.answer("Я не умею работать с документами, мне нужно изображение")
-
-def get_img_array(img_path, size):
-   img = load_img(img_path, target_size=size)
-   array = img_to_array(img)
-   # расширяем размерность для преобразования массива в пакеты
-   array = np.expand_dims(array, axis=0)
-   return array
-
-def predictions(img_path):
-  img_size = (224, 224)
-  EfficientNet_model = load_model('EfficientNet.h5')
-
-  preprocess_input = tf.keras.applications.efficientnet.preprocess_input
-  img_array = preprocess_input(get_img_array(img_path, size=img_size))
-  pred = EfficientNet_model.predict(img_array)
-  if pred < 0.5:
-    return 'изображение сгенерировано нейросетью'
-  else:
-    return 'изображение создано человеком'
-
-# Запуск процесса поллинга новых апдейтов
+# Запуск бота
 async def main():
+    logging.basicConfig(level=logging.INFO)
+    bot = Bot(token=config.bot_token.get_secret_value())
+    dp = Dispatcher()
+    dp.include_routers(start_help.router, different_types.router, photo.router)
+
+    # Запускаем бота и пропускаем все накопленные входящие
+    # Да, этот метод можно вызвать даже если у вас поллинг
+    await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
+
+
 if __name__ == "__main__":
     asyncio.run(main())
+
+# import asyncio
+# import logging
+# from aiogram import Bot, Dispatcher, types
+# from aiogram.filters.command import Command
+# from aiogram import F
+# import numpy as np
+# import tensorflow as tf
+# from tensorflow import keras
+# from keras.models import load_model
+# from tensorflow.keras.preprocessing.image import load_img, img_to_array
+# from config_reader import config
+# import io
+
+# #включаем логирование
+# logging.basicConfig(level=logging.INFO)
+# #объект бота
+# bot = Bot(token=config.bot_token.get_secret_value())
+# # Диспетчер
+# dp = Dispatcher()
+
+# @dp.message(F.photo)
+# async def download_photo(message: types.Message, bot: Bot):
+#    file_in_io = io.BytesIO()
+# # загружаем фото в папку по умолчанию
+#    await message.bot.download(file=message.photo[-1],
+#         destination=file_in_io)
+#    img_path = file_in_io
+# # получаем предсказание
+#    pred = predictions(img_path)
+# # Отправляем ответ пользователю
+#    await message.answer(f"Я думаю, что это {pred}")
+
+# def get_img_array(img_path, size):
+#    img = load_img(img_path, target_size=size)
+#    array = img_to_array(img)
+#    # расширяем размерность для преобразования массива в пакеты
+#    array = np.expand_dims(array, axis=0)
+#    return array
+
+# def predictions(img_path):
+#   img_size = (224, 224)
+#   EfficientNet_model = load_model('EfficientNet.h5')
+
+#   preprocess_input = tf.keras.applications.efficientnet.preprocess_input
+#   img_array = preprocess_input(get_img_array(img_path, size=img_size))
+#   pred = EfficientNet_model.predict(img_array)
+#   if pred < 0.5:
+#     return 'изображение сгенерировано нейросетью'
+#   else:
+#     return 'изображение создано человеком'
+
+# # Запуск процесса поллинга новых апдейтов
+# async def main():
+#     await dp.start_polling(bot)
+# if __name__ == "__main__":
+#     asyncio.run(main())
