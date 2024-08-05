@@ -16,6 +16,7 @@ router = Router()
 
 @router.message(F.photo)
 async def download_photo(message: Message, bot: Bot):
+   await bot.send_chat_action(chat_id=message.from_user.id, action='typing')
    file_in_io = io.BytesIO()
 # загружаем фото в папку по умолчанию
    await message.bot.download(file=message.photo[-1],
